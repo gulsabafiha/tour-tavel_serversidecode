@@ -20,12 +20,10 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
-   
+
     const database = client.db("tour");
     const serviceCollection = database.collection("offerings");
-
-    const userdb = client.db("User");
-    const userCollection = userdb.collection("user-info");
+    const orderCollection = database.collection("order");
 
     //GET API AND LOAD DATA
     app.get("/services", async (req, res) => {
@@ -33,6 +31,27 @@ async function run() {
       const services = await cursor.toArray();
       res.send(services);
     });
+
+    //POST INFO OF ORDERS
+    app.post("/orders", async (req, res) => {
+      const order=req.body;
+      order.careatedAt=new Date();
+      const orderResult= await orderCollection.insertOne(order);
+      res.json(orderResult);
+    });
+
+
+    //Get Orders
+    app.get('/orders', async (req,res)=>{
+      let query= {};
+      const email= req.query.email;
+      if(email){
+          query = {email :email};
+      }
+      const orders=orderCollection.find(query);
+      const order=await orders.toArray();
+      res.json(order);
+    })
 
     //GET SINGLE SERVICE
     app.get("/services/:id", async (req, res) => {
@@ -49,14 +68,6 @@ async function run() {
       res.json(result);
     });
 
-    //Post user data
-    app.post("/user", async (req, res) => {
-      const user = req.body;
-      const result = await userCollection.insertOne(user);
-      console.log(result);
-      res.json(result);
-    });
-
     //DELETE API
     app.delete("/services/:id", async (req, res) => {
       const id = req.params.id;
@@ -64,7 +75,6 @@ async function run() {
       const result = await serviceCollection.deleteOne(query);
       res.json(result);
     });
-    
   } finally {
     // await client.close();
   }
